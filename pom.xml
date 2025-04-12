@@ -9,10 +9,10 @@
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
 	<groupId>ch.luimo.flashsale.purchase</groupId>
-	<artifactId>flashsale-purchase-requests</artifactId>
+	<artifactId>flashsale-purchase-processor</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name>flashsale-purchase-requests</name>
-	<description>Flashsale Purchase Requests Microservice</description>
+	<name>flashsale-purchase-processor</name>
+	<description>Flashsale Purchase Processor Microservice</description>
 	<url/>
 	<licenses>
 		<license/>
