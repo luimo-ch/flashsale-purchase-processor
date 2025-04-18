@@ -4,6 +4,7 @@ import ch.luimode.flashsale.PurchaseRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.core.DefaultKafkaProducerFactory;
@@ -14,9 +15,16 @@ import java.util.HashMap;
 import java.util.Map;
 
 @Configuration
+@EnableConfigurationProperties(KafkaProperties.class)
 public class KafkaConfig {
 
     private static final Logger LOG = LoggerFactory.getLogger(KafkaConfig.class);
+
+    private final KafkaProperties kafkaProperties;
+
+    public KafkaConfig(KafkaProperties kafkaProperties) {
+        this.kafkaProperties = kafkaProperties;
+    }
 
     @Value("${application.kafka-api-key}")
     private String kafkaApiKey;
@@ -39,30 +47,23 @@ public class KafkaConfig {
         );
     }
 
-    @Bean
-    public Map<String, Object> kafkaProperties() {
+    public Map<String, Object> kafkaProducerConfig() {
         Map<String, Object> props = new HashMap<>();
+        props.put("bootstrap.servers", kafkaProperties.getBootstrapServers());
+        props.put("security.protocol", kafkaProperties.getProperties().get("security.protocol"));
+        props.put("sasl.mechanism", kafkaProperties.getProperties().get("sasl.mechanism"));
         props.put("sasl.jaas.config", kafkaJaasConfig());
-        props.put("security.protocol", "SASL_SSL");
-        props.put("sasl.mechanism", "PLAIN");
-        props.put("basic.auth.credentials.source", "USER_INFO");
-        props.put("basic.auth.user.info", schemaRegistryCredentials());
-        props.put("key.serializer", "org.apache.kafka.common.serialization.StringSerializer");
-        props.put("value.serializer", "io.confluent.kafka.serializers.KafkaAvroSerializer");
-        props.put("schema.registry.url", "https://psrc-9mwvv.europe-west6.gcp.confluent.cloud");
-        props.put("bootstrap.servers", "pkc-lzoyy.europe-west6.gcp.confluent.cloud:9092");
+        props.put("schema.registry.url", kafkaProperties.getProperties().get("schema.registry.url"));
+        props.put("basic.auth.credentials.source", kafkaProperties.getProperties().get("basic.auth.credentials.source"));
+        props.put("basic.auth.user.info", schemaApiKey + ":" + schemaApiSecret);
+        props.put("key.serializer", kafkaProperties.getProducer().getKeySerializer());
+        props.put("value.serializer", kafkaProperties.getProducer().getValueSerializer());
         return props;
     }
 
     @Bean
-    public String schemaRegistryCredentials() {
-        return schemaApiKey + ":" + schemaApiSecret;
-    }
-
-    @Bean
     public ProducerFactory<String, PurchaseRequest> producerFactory() {
-        Map<String, Object> configProps = kafkaProperties();
-        return new DefaultKafkaProducerFactory<>(configProps);
+        return new DefaultKafkaProducerFactory<>(kafkaProducerConfig());
     }
 
     @Bean
