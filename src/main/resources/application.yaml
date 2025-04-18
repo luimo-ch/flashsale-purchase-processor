@@ -3,6 +3,8 @@ application:
     purchase-requests: flashsale.purchase.requests
   kafka-api-key: ${sm://kafka-api-key}
   kafka-api-secret: ${sm://kafka-api-secret}
+  kafka-consumer-api-key: ${sm://kafka-consumer-api-key}
+  kafka-consumer-api-secret: ${sm://kafka-consumer-api-secret}
   schema-api-key: ${sm://schema-registry-api-key}
   schema-api-secret: ${sm://schema-registry-api-secret}
 
@@ -15,7 +17,7 @@ spring:
     gcp:
       project-id: flashsale-456707
       credentials:
-        location: ${GOOGLE_APPLICATION_CREDENTIALS_PURCHASE_PROCESSOR}
+        location: file:${GOOGLE_APPLICATION_CREDENTIALS_PURCHASE_PROCESSOR}
   application:
     name: flashsale-purchase-processor
   kafka:
@@ -26,6 +28,8 @@ spring:
       properties:
         enable.idempotence: true
       acks: all
+    consumer:
+      group-id: purchase-requests-consumer-group
     properties:
       schema.registry.url: https://psrc-9mwvv.europe-west6.gcp.confluent.cloud
       security.protocol: SASL_SSL

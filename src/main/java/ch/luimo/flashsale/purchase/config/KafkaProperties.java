@@ -15,6 +15,7 @@ public class KafkaProperties {
     private String bootstrapServers;
     private Properties properties;
     private Producer producer;
+    private Consumer consumer;
 
     @Getter
     @Setter
@@ -23,5 +24,11 @@ public class KafkaProperties {
         private String valueSerializer;
         private String acks;
         private Properties properties;
+    }
+
+    @Getter
+    @Setter
+    public static class Consumer {
+        private String groupId;
     }
 }
