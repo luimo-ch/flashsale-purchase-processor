@@ -7,9 +7,15 @@ application:
   schema-api-secret: ${sm://schema-registry-api-secret}
 
 spring:
+  config:
+    import: sm://
+  profiles:
+    active: local
   cloud:
     gcp:
       project-id: flashsale-456707
+      credentials:
+        location: ${GOOGLE_APPLICATION_CREDENTIALS_PURCHASE_PROCESSOR}
   application:
     name: flashsale-purchase-processor
   kafka:
@@ -25,13 +31,9 @@ spring:
       security.protocol: SASL_SSL
       sasl:
         mechanism: PLAIN
-#        jaas.config: org.apache.kafka.common.security.plain.PlainLoginModule required username='J5YLG33YCVT4PEPT' password='hZyaDytOW9Q1f1tM7oMlcET+x+At3+XtGF0GlE0+otbW+KPpDAr6uv8E1+s1yTGW';
         jaas.config: ${kafkaJaasConfig}
       basic:
         auth:
           credentials.source: USER_INFO
-#          user.info: BPGNIASEDYFOAUIT:zS50DUuhtBetlMxuOAnpmWeCjuRB0OwjLDkAVI7ur4+pLjgssFHFJDEPivwCaxnD
           user.info: ${schemaRegistryCredentials}
       ssl.endpoint.identification.algorithm: https
-
-

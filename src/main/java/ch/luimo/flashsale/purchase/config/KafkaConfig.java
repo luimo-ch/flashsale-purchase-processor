@@ -1,6 +1,8 @@
 package ch.luimo.flashsale.purchase.config;
 
 import ch.luimode.flashsale.PurchaseRequest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -13,6 +15,8 @@ import java.util.Map;
 
 @Configuration
 public class KafkaConfig {
+
+    private static final Logger LOG = LoggerFactory.getLogger(KafkaConfig.class);
 
     @Value("${application.kafka-api-key}")
     private String kafkaApiKey;
@@ -28,7 +32,6 @@ public class KafkaConfig {
 
     @Bean
     public String kafkaJaasConfig() {
-        System.out.println("Kafka JAAS Config: " + kafkaApiKey + " " + kafkaApiSecret);
         return String.format(
                 "org.apache.kafka.common.security.plain.PlainLoginModule required username='%s' password='%s';",
                 kafkaApiKey,
@@ -66,6 +69,5 @@ public class KafkaConfig {
     public KafkaTemplate<String, PurchaseRequest> kafkaTemplate(ProducerFactory<String, PurchaseRequest> producerFactory) {
         return new KafkaTemplate<>(producerFactory);
     }
-
 
 }
