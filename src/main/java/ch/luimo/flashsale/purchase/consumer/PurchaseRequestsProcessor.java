@@ -11,7 +11,9 @@ public class PurchaseRequestsProcessor {
 
     private static final Logger LOG = LoggerFactory.getLogger(PurchaseRequestsProcessor.class);
 
-    @KafkaListener(topics = "${application.kafka-topics.purchase-requests}", groupId = "${spring.kafka.consumer.group-id}")
+    @KafkaListener(
+            topics = "${application.kafka-topics.purchase-requests}",
+            groupId = "${spring.kafka.consumer.group-id}")
     public void processPurchaseRequests(PurchaseRequest purchaseRequest) {
         LOG.info("Received Message {} ", purchaseRequest);
     }
