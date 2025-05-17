@@ -1,0 +1,13 @@
+spring:
+  cloud:
+    gcp:
+      core:
+        enabled: false
+      secretmanager:
+        enabled: false
+  sql:
+    init:
+      mode: always
+  kafka:
+    properties:
+      schema.registry.url: http://localhost:8081
