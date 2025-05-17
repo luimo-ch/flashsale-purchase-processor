@@ -1,0 +1,31 @@
+application:
+  kafka-api-key: ${sm://kafka-api-key}
+  kafka-api-secret: ${sm://kafka-api-secret}
+  kafka-consumer-api-key: ${sm://kafka-consumer-api-key}
+  kafka-consumer-api-secret: ${sm://kafka-consumer-api-secret}
+  schema-api-key: ${sm://schema-registry-api-key}
+  schema-api-secret: ${sm://schema-registry-api-secret}
+
+spring:
+  config:
+    import: sm://
+  cloud:
+    gcp:
+      project-id: flashsale-456707
+      credentials:
+        location: file:${GOOGLE_APPLICATION_CREDENTIALS_PURCHASE_PROCESSOR}
+  application:
+    name: flashsale-purchase-processor
+  kafka:
+    bootstrap-servers: pkc-lzoyy.europe-west6.gcp.confluent.cloud:9092
+    properties:
+      schema.registry.url: https://psrc-9mwvv.europe-west6.gcp.confluent.cloud
+      security.protocol: SASL_SSL
+      sasl:
+        mechanism: PLAIN
+        jaas.config: ${kafkaJaasConfig}
+      basic:
+        auth:
+          credentials.source: USER_INFO
+          user.info: ${schemaRegistryCredentials}
+      ssl.endpoint.identification.algorithm: https
