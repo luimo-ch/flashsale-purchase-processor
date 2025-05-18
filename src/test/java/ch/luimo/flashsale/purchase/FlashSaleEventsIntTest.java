@@ -2,10 +2,12 @@ package ch.luimo.flashsale.purchase;
 
 import ch.luimo.flashsale.eventservice.avro.AvroEventStatus;
 import ch.luimo.flashsale.eventservice.avro.AvroFlashSaleEvent;
+import ch.luimo.flashsale.purchase.service.FlashSaleEventCacheService;
 import org.awaitility.Awaitility;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -18,6 +20,9 @@ public class FlashSaleEventsIntTest extends IntegrationTestBase {
 
     private static final Logger LOG = LoggerFactory.getLogger(FlashSaleEventsIntTest.class);
 
+    @Autowired
+    FlashSaleEventCacheService cacheService;
+
     @Test
     public void testPublishFlashSaleEvent() {
         AvroFlashSaleEvent avroFlashSaleEvent = flashSaleEventOf();
@@ -25,26 +30,21 @@ public class FlashSaleEventsIntTest extends IntegrationTestBase {
         testProducer.publishEvent(avroFlashSaleEvent);
 
         LOG.info("Test event published: {}", avroFlashSaleEvent);
-        assertEventPublished("");
+        assertEventCached(avroFlashSaleEvent.getId());
     }
 
-    private void assertEventPublished(String expectedEventId) {
+    private void assertEventCached(Long expectedEventId) {
         LOG.info("Starting await for event with ID: {}", expectedEventId);
         try {
             Awaitility.await()
                     .atMost(5, TimeUnit.SECONDS)
                     .with().pollInterval(Duration.ofMillis(500))
                     .untilAsserted(() -> {
-                        LOG.info("Polling ...");
-//                        ConsumerRecords<String, String> records = testProducer.poll(Duration.ofMillis(500));
-//                        for (var record : records) {
-//                            LOG.info("Successfully received record: key = {}, value = {}", record.key(), record.value());
-//                            assertThat(record.key()).isEqualTo(expectedEventId);
-//                        }
-                        assertTrue(false);
+                        LOG.info("Checking cache for event with ID: {}", expectedEventId);
+                        assertTrue(cacheService.isActive(expectedEventId));
                     });
         } finally {
-            LOG.info("Closing Kafka consumer");
+            LOG.info("Ending await for event with ID: {}", expectedEventId);
         }
         LOG.info("Await finished for event: {}", expectedEventId);
     }
@@ -59,7 +59,7 @@ public class FlashSaleEventsIntTest extends IntegrationTestBase {
                 .setSellerId(UUID.randomUUID().toString())
                 .setStockQuantity(1000)
                 .setMaxPerCustomer(10)
-                .setEventStatus(AvroEventStatus.CREATED)
+                .setEventStatus(AvroEventStatus.STARTED)
                 .build();
     }
 }
