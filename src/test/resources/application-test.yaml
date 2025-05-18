@@ -10,4 +10,8 @@ spring:
       mode: always
   kafka:
     properties:
-      schema.registry.url: http://localhost:8081
+      schema.registry.url: ${spring.kafka.properties.schema.registry.url} # dynamically set by test-containers
+  data:
+    redis:
+      host: ${spring.data.redis.host} # dynamically set by test-containers
+      port: ${spring.data.redis.port} # dynamically set by test-containers

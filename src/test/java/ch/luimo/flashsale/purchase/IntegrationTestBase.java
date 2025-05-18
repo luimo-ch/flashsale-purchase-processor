@@ -40,6 +40,9 @@ public abstract class IntegrationTestBase {
             .withUsername("testuser")
             .withPassword("testpass");
 
+    private static final GenericContainer<?> REDIS_CONTAINER = new GenericContainer<>("redis:7.0.12")
+            .withExposedPorts(6379);
+
     public static final String CONFLUENT_PLATFORM_VERSION = "7.4.0";
     private static final DockerImageName KAFKA_IMAGE = DockerImageName.parse("confluentinc/cp-kafka")
             .asCompatibleSubstituteFor("apache/kafka")
@@ -75,6 +78,10 @@ public abstract class IntegrationTestBase {
         mysqlContainer.start();
         KAFKA_CONTAINER.start();
         SCHEMA_REGISTRY.start();
+        REDIS_CONTAINER.start();
+
+        System.setProperty("spring.data.redis.host", REDIS_CONTAINER.getHost());
+        System.setProperty("spring.data.redis.port", REDIS_CONTAINER.getMappedPort(6379).toString());
 
         System.setProperty("spring.datasource.url", mysqlContainer.getJdbcUrl());
         System.setProperty("spring.datasource.username", mysqlContainer.getUsername());
@@ -83,8 +90,9 @@ public abstract class IntegrationTestBase {
         System.setProperty(BOOTSTRAP_SERVERS_PROPERTY, KAFKA_CONTAINER.getBootstrapServers());
         System.setProperty(SCHEMA_REGISTRY_PROPERTY, "http://localhost:" + SCHEMA_REGISTRY.getFirstMappedPort());
 
-        LOG.info("Starting Kafka container at {}", KAFKA_CONTAINER.getBootstrapServers());
-        LOG.info("Starting MySQL container at {}", mysqlContainer.getJdbcUrl());
+        LOG.info("Started Kafka container at {}", KAFKA_CONTAINER.getBootstrapServers());
+        LOG.info("Started MySQL container at {}", mysqlContainer.getJdbcUrl());
+        LOG.info("Started Redis container at {}", REDIS_CONTAINER.getHost() + ":" + REDIS_CONTAINER.getMappedPort(6379));
 
         createTestKafkaTopic("flashsale.purchase.requests", KAFKA_CONTAINER.getBootstrapServers(), false);
         createTestKafkaTopic("flashsale.events", KAFKA_CONTAINER.getBootstrapServers(), true);
@@ -110,6 +118,9 @@ public abstract class IntegrationTestBase {
         }
         if (KAFKA_CONTAINER != null) {
             KAFKA_CONTAINER.stop();
+        }
+        if (REDIS_CONTAINER != null) {
+            REDIS_CONTAINER.stop();
         }
     }
 }

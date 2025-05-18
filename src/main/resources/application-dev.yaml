@@ -29,3 +29,7 @@ spring:
           credentials.source: USER_INFO
           user.info: ${schemaRegistryCredentials}
       ssl.endpoint.identification.algorithm: https
+  data:
+    redis:
+      host: todo
+      port: 6379
