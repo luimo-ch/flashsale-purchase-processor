@@ -2,29 +2,51 @@ package ch.luimo.flashsale.purchase;
 
 import ch.luimo.flashsale.eventservice.avro.AvroEventStatus;
 import ch.luimo.flashsale.eventservice.avro.AvroFlashSaleEvent;
-import ch.luimo.flashsale.purchase.config.FlashSaleEventsTestProducer;
+import org.awaitility.Awaitility;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
+
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class FlashSaleEventsIntTest extends IntegrationTestBase {
 
     private static final Logger LOG = LoggerFactory.getLogger(FlashSaleEventsIntTest.class);
 
-    @Autowired
-    private FlashSaleEventsTestProducer flashSaleEventsTestProducer;
-
     @Test
     public void testPublishFlashSaleEvent() {
         AvroFlashSaleEvent avroFlashSaleEvent = flashSaleEventOf();
 
-        flashSaleEventsTestProducer.publishEvent(avroFlashSaleEvent);
+        testProducer.publishEvent(avroFlashSaleEvent);
 
         LOG.info("Test event published: {}", avroFlashSaleEvent);
+        assertEventPublished("");
+    }
+
+    private void assertEventPublished(String expectedEventId) {
+        LOG.info("Starting await for event with ID: {}", expectedEventId);
+        try {
+            Awaitility.await()
+                    .atMost(5, TimeUnit.SECONDS)
+                    .with().pollInterval(Duration.ofMillis(500))
+                    .untilAsserted(() -> {
+                        LOG.info("Polling ...");
+//                        ConsumerRecords<String, String> records = testProducer.poll(Duration.ofMillis(500));
+//                        for (var record : records) {
+//                            LOG.info("Successfully received record: key = {}, value = {}", record.key(), record.value());
+//                            assertThat(record.key()).isEqualTo(expectedEventId);
+//                        }
+                        assertTrue(false);
+                    });
+        } finally {
+            LOG.info("Closing Kafka consumer");
+        }
+        LOG.info("Await finished for event: {}", expectedEventId);
     }
 
     private AvroFlashSaleEvent flashSaleEventOf() {

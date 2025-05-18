@@ -1,7 +1,9 @@
 package ch.luimo.flashsale.purchase;
 
-import ch.luimo.flashsale.purchase.config.FlashSaleEventsTestProducer;
-import ch.luimo.flashsale.purchase.config.KafkaTestConfig;
+import ch.luimo.flashsale.purchase.config.KafkaTestProducerConfig;
+import ch.luimo.flashsale.purchase.config.KafkaTestConsumerConfig;
+import org.apache.kafka.clients.admin.AdminClient;
+import org.apache.kafka.clients.admin.NewTopic;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.slf4j.Logger;
@@ -20,9 +22,11 @@ import org.testcontainers.utility.DockerImageName;
 
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
+import java.util.Map;
 
 @SpringBootTest
-@Import(KafkaTestConfig.class)
+@Import({KafkaTestProducerConfig.class, KafkaTestConsumerConfig.class})
 @ActiveProfiles("test")
 public abstract class IntegrationTestBase {
 
@@ -64,7 +68,7 @@ public abstract class IntegrationTestBase {
     protected String kafkaTopic;
 
     @Autowired
-    protected FlashSaleEventsTestProducer testConsumer;
+    protected KafkaTestProducerConfig.FlashSaleEventsTestProducer testProducer;
 
     @BeforeAll
     static void startContainers() {
@@ -81,6 +85,22 @@ public abstract class IntegrationTestBase {
 
         LOG.info("Starting Kafka container at {}", KAFKA_CONTAINER.getBootstrapServers());
         LOG.info("Starting MySQL container at {}", mysqlContainer.getJdbcUrl());
+
+        createTestKafkaTopic("flashsale.purchase.requests", KAFKA_CONTAINER.getBootstrapServers(), false);
+        createTestKafkaTopic("flashsale.events", KAFKA_CONTAINER.getBootstrapServers(), true);
+    }
+
+    private static void createTestKafkaTopic(String topicName, String bootstrapServers, boolean logCompaction) {
+        try (AdminClient adminClient = AdminClient.create(Map.of("bootstrap.servers", bootstrapServers))) {
+            NewTopic topic = new NewTopic(topicName, 1, (short) 1);
+            if(logCompaction) {
+                topic = topic.configs(Map.of("cleanup.policy", "compact"));
+            }
+            adminClient.createTopics(List.of(topic)).all().get();
+            LOG.info("Created log-compacted topic {}", topicName);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to create log-compacted topic " + topicName, e);
+        }
     }
 
     @AfterAll
