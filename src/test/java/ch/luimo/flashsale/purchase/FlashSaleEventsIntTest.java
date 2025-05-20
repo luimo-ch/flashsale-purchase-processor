@@ -4,6 +4,7 @@ import ch.luimo.flashsale.eventservice.avro.AvroEventStatus;
 import ch.luimo.flashsale.eventservice.avro.AvroFlashSaleEvent;
 import ch.luimo.flashsale.purchase.service.FlashSaleEventCacheService;
 import org.awaitility.Awaitility;
+import org.awaitility.core.ThrowingRunnable;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,6 +15,7 @@ import java.time.Instant;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class FlashSaleEventsIntTest extends IntegrationTestBase {
@@ -24,29 +26,44 @@ public class FlashSaleEventsIntTest extends IntegrationTestBase {
     FlashSaleEventCacheService cacheService;
 
     @Test
-    public void testPublishFlashSaleEvent() {
+    public void testPublishFlashSaleEvent_startAndEndEvent_shouldAddAndRemoveFromCache() {
         AvroFlashSaleEvent avroFlashSaleEvent = flashSaleEventOf();
 
         testProducer.publishEvent(avroFlashSaleEvent);
-
         LOG.info("Test event published: {}", avroFlashSaleEvent);
-        assertEventCached(avroFlashSaleEvent.getId());
+        assertEventReceivedAndCached(avroFlashSaleEvent.getId());
+
+        avroFlashSaleEvent.setEventStatus(AvroEventStatus.ENDED);
+        testProducer.publishEvent(avroFlashSaleEvent);
+        LOG.info("Test event published: {}", avroFlashSaleEvent);
+        assertEventReceivedAndRemoved(avroFlashSaleEvent.getId());
     }
 
-    private void assertEventCached(Long expectedEventId) {
-        LOG.info("Starting await for event with ID: {}", expectedEventId);
-        try {
-            Awaitility.await()
-                    .atMost(5, TimeUnit.SECONDS)
-                    .with().pollInterval(Duration.ofMillis(500))
-                    .untilAsserted(() -> {
-                        LOG.info("Checking cache for event with ID: {}", expectedEventId);
-                        assertTrue(cacheService.isActive(expectedEventId));
-                    });
-        } finally {
-            LOG.info("Ending await for event with ID: {}", expectedEventId);
-        }
-        LOG.info("Await finished for event: {}", expectedEventId);
+    private void assertEventReceivedAndCached(Long expectedEventId) {
+        LOG.info("Starting assertEventReceivedAndCached for event with ID: {}", expectedEventId);
+        pollAndAssert(() -> {
+            LOG.info("Checking cache for event with ID: {}", expectedEventId);
+            cacheService.printEvent(expectedEventId);
+            assertTrue(cacheService.isEventActive(expectedEventId));
+        });
+        LOG.info("Finished assertEventReceivedAndCached for event: {}", expectedEventId);
+    }
+
+    private void assertEventReceivedAndRemoved(Long expectedEventId) {
+        LOG.info("Starting assertEventReceivedAndRemoved for event with ID: {}", expectedEventId);
+        pollAndAssert(() -> {
+            LOG.info("Checking cache for event with ID: {}", expectedEventId);
+            cacheService.printEvent(expectedEventId);
+            assertFalse(cacheService.isEventActive(expectedEventId));
+        });
+        LOG.info("Finished assertEventReceivedAndRemoved for event: {}", expectedEventId);
+    }
+
+    private void pollAndAssert(ThrowingRunnable assertion) {
+        Awaitility.await()
+                .atMost(5, TimeUnit.SECONDS)
+                .with().pollInterval(Duration.ofMillis(500))
+                .untilAsserted(assertion);
     }
 
     private AvroFlashSaleEvent flashSaleEventOf() {
