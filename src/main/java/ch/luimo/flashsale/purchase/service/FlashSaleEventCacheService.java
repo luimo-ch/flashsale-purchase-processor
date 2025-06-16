@@ -1,17 +1,19 @@
 package ch.luimo.flashsale.purchase.service;
 
 import ch.luimo.flashsale.eventservice.avro.AvroFlashSaleEvent;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.core.HashOperations;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.data.redis.core.SetOperations;
 import org.springframework.stereotype.Service;
 
 @Service
 public class FlashSaleEventCacheService {
 
     private static final Logger LOG = LoggerFactory.getLogger(FlashSaleEventCacheService.class);
+
+    private static final String EVENT_HASH_PREFIX = "flashsale-purchase-processor:event:";
 
     private static final String KEY_EVENT_NAME = "eventName";
     private static final String KEY_START_TIME = "startTime";
@@ -22,17 +24,17 @@ public class FlashSaleEventCacheService {
     private static final String KEY_MAX_PER_CUSTOMER = "maxPerCustomer";
     private static final String KEY_EVENT_STATUS = "eventStatus";
 
-    private static final String EVENT_HASH_PREFIX = "flashsale:event:";
-    private static final String ACTIVE_EVENTS_SET = "flashsale:active";
+    // this is a shared redis key!
+    private static final String PURCHASE_CACHE_KEY_PREFIX = "flashsale:purchase:";
+    private static final String PURCHASE_REQUEST_STATUS = "status";
+    private static final String PURCHASE_REQUEST_REJECTION_REASON = "reason";
 
     private final RedisTemplate<String, String> redisTemplate;
     private final HashOperations<String, String, String> hashOps;
-    private final SetOperations<String, String> setOps;
 
     public FlashSaleEventCacheService(RedisTemplate<String, String> redisTemplate) {
         this.redisTemplate = redisTemplate;
         this.hashOps = redisTemplate.opsForHash();
-        this.setOps = redisTemplate.opsForSet();
     }
 
     public void addEvent(AvroFlashSaleEvent event) {
@@ -46,9 +48,6 @@ public class FlashSaleEventCacheService {
         hashOps.put(key, KEY_STOCK_QUANTITY, String.valueOf(event.getStockQuantity()));
         hashOps.put(key, KEY_MAX_PER_CUSTOMER, String.valueOf(event.getMaxPerCustomer()));
         hashOps.put(key, KEY_EVENT_STATUS, event.getEventStatus().name());
-
-        // set holding the currently active flashsale events
-        setOps.add(ACTIVE_EVENTS_SET, String.valueOf(event.getId()));
     }
 
     public void printEvent(long id) {
@@ -62,15 +61,26 @@ public class FlashSaleEventCacheService {
     public void removeEvent(long eventId) {
         String key = EVENT_HASH_PREFIX + eventId;
         Boolean deleted = redisTemplate.delete(key);
-        if(deleted){
-            setOps.remove(ACTIVE_EVENTS_SET, String.valueOf(eventId));
-        }else {
-            LOG.warn("Event with id {} not found!", eventId);
+        if(deleted) {
+            LOG.info("Event with key {} was deleted ", key);
+        } else  {
+            LOG.warn("Unable to delete event with key {}. It does not exist!", key);
         }
     }
 
     public boolean isEventActive(long eventId) {
-        return Boolean.TRUE.equals(setOps.isMember(ACTIVE_EVENTS_SET, String.valueOf(eventId)));
+        String key = EVENT_HASH_PREFIX + eventId;
+        String eventStatus = hashOps.get(key, KEY_EVENT_STATUS);
+        return StringUtils.isNotBlank(eventStatus);
+    }
+
+    public int getPerCustomerPurchaseLimit(long eventId) {
+        String key = EVENT_HASH_PREFIX + eventId;
+        String maxPerCustomerStr = hashOps.get(key, KEY_MAX_PER_CUSTOMER);
+        if(StringUtils.isBlank(maxPerCustomerStr)){
+            throw new IllegalArgumentException("Max per customer limit is empty");
+        }
+        return Integer.parseInt(maxPerCustomerStr);
     }
 
     public void decrementStock(long eventId) {

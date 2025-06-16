@@ -29,12 +29,12 @@ public class FlashSaleEventsIntTest extends IntegrationTestBase {
     public void testPublishFlashSaleEvent_startAndEndEvent_shouldAddAndRemoveFromCache() {
         AvroFlashSaleEvent avroFlashSaleEvent = flashSaleEventOf();
 
-        testProducer.publishEvent(avroFlashSaleEvent);
+        flashSaleEventsTestProducer.publishEvent(avroFlashSaleEvent);
         LOG.info("Test event published: {}", avroFlashSaleEvent);
         assertEventReceivedAndCached(avroFlashSaleEvent.getId());
 
         avroFlashSaleEvent.setEventStatus(AvroEventStatus.ENDED);
-        testProducer.publishEvent(avroFlashSaleEvent);
+        flashSaleEventsTestProducer.publishEvent(avroFlashSaleEvent);
         LOG.info("Test event published: {}", avroFlashSaleEvent);
         assertEventReceivedAndRemoved(avroFlashSaleEvent.getId());
     }

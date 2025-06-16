@@ -1,7 +1,6 @@
 package ch.luimo.flashsale.purchase;
 
 import ch.luimo.flashsale.purchase.config.KafkaTestProducerConfig;
-import ch.luimo.flashsale.purchase.config.KafkaTestConsumerConfig;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.NewTopic;
 import org.junit.jupiter.api.AfterAll;
@@ -15,7 +14,6 @@ import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.Network;
-import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.containers.wait.strategy.Wait;
 import org.testcontainers.kafka.ConfluentKafkaContainer;
 import org.testcontainers.utility.DockerImageName;
@@ -26,19 +24,14 @@ import java.util.List;
 import java.util.Map;
 
 @SpringBootTest
-@Import({KafkaTestProducerConfig.class, KafkaTestConsumerConfig.class})
+@Import(KafkaTestProducerConfig.class)
 @ActiveProfiles("test")
 public abstract class IntegrationTestBase {
 
-    public static final String BOOTSTRAP_SERVERS_PROPERTY = "spring.kafka.bootstrap-servers";
-    public static final String SCHEMA_REGISTRY_PROPERTY = "spring.kafka.properties.schema.registry.url";
+    public static final String BOOTSTRAP_SERVERS_PROPERTY = "KAFKA_BOOTSTRAP_SERVERS";
+    public static final String SCHEMA_REGISTRY_PROPERTY = "SCHEMA_REGISTRY_URL";
 
     private static final Logger LOG = LoggerFactory.getLogger(IntegrationTestBase.class);
-
-    protected static final PostgreSQLContainer<?> mysqlContainer = new PostgreSQLContainer<>(DockerImageName.parse("postgres:15.4"))
-            .withDatabaseName("testdb")
-            .withUsername("testuser")
-            .withPassword("testpass");
 
     private static final GenericContainer<?> REDIS_CONTAINER = new GenericContainer<>("redis:7.0.12")
             .withExposedPorts(6379);
@@ -71,11 +64,10 @@ public abstract class IntegrationTestBase {
     protected String kafkaTopic;
 
     @Autowired
-    protected KafkaTestProducerConfig.FlashSaleEventsTestProducer testProducer;
+    protected KafkaTestProducerConfig.FlashSaleEventsTestProducer flashSaleEventsTestProducer;
 
     @BeforeAll
     static void startContainers() {
-        mysqlContainer.start();
         KAFKA_CONTAINER.start();
         SCHEMA_REGISTRY.start();
         REDIS_CONTAINER.start();
@@ -83,15 +75,10 @@ public abstract class IntegrationTestBase {
         System.setProperty("spring.data.redis.host", REDIS_CONTAINER.getHost());
         System.setProperty("spring.data.redis.port", REDIS_CONTAINER.getMappedPort(6379).toString());
 
-        System.setProperty("spring.datasource.url", mysqlContainer.getJdbcUrl());
-        System.setProperty("spring.datasource.username", mysqlContainer.getUsername());
-        System.setProperty("spring.datasource.password", mysqlContainer.getPassword());
-
         System.setProperty(BOOTSTRAP_SERVERS_PROPERTY, KAFKA_CONTAINER.getBootstrapServers());
         System.setProperty(SCHEMA_REGISTRY_PROPERTY, "http://localhost:" + SCHEMA_REGISTRY.getFirstMappedPort());
 
         LOG.info("Started Kafka container at {}", KAFKA_CONTAINER.getBootstrapServers());
-        LOG.info("Started MySQL container at {}", mysqlContainer.getJdbcUrl());
         LOG.info("Started Redis container at {}", REDIS_CONTAINER.getHost() + ":" + REDIS_CONTAINER.getMappedPort(6379));
 
         createTestKafkaTopic("flashsale.purchase.requests", KAFKA_CONTAINER.getBootstrapServers(), false);
@@ -105,9 +92,9 @@ public abstract class IntegrationTestBase {
                 topic = topic.configs(Map.of("cleanup.policy", "compact"));
             }
             adminClient.createTopics(List.of(topic)).all().get();
-            LOG.info("Created log-compacted topic {}", topicName);
+            LOG.info("Created topic {}", topicName);
         } catch (Exception e) {
-            throw new RuntimeException("Failed to create log-compacted topic " + topicName, e);
+            throw new RuntimeException("Failed to create topic " + topicName, e);
         }
     }
 

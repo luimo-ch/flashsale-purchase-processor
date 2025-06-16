@@ -4,23 +4,34 @@ application:
     flashsale-events: flashsale.events
 
 spring:
-  profiles:
-    active: local
-  kafka:
-    producer:
-      key-serializer: org.apache.kafka.common.serialization.StringSerializer
-      value-serializer: io.confluent.kafka.serializers.KafkaAvroSerializer
-      properties:
-        enable.idempotence: true
-      acks: all
-    consumer:
-      group-id: purchase-requests-consumer-group
+  application.name: flashsale-purchase-processor
   cloud:
     gcp:
       project-id: flashsale-456707
-      credentials:
-        location: file:${GOOGLE_APPLICATION_CREDENTIALS_PURCHASE_PROCESSOR}
       secretmanager:
         enabled: false
       core:
         enabled: false
+
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}
+    consumer:
+      group-id: purchase-requests-consumer-group
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: io.confluent.kafka.serializers.KafkaAvroDeserializer
+      properties:
+        schema.registry.url: ${SCHEMA_REGISTRY_URL}
+        specific.avro.reader: true
+        auto.offset.reset: earliest
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: io.confluent.kafka.serializers.KafkaAvroSerializer
+      acks: all
+      properties:
+        schema.registry.url: ${SCHEMA_REGISTRY_URL}
+        enable.idempotence: true
+
+  data:
+    redis:
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT}

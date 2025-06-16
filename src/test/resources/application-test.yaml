@@ -1,17 +1,1 @@
-spring:
-  cloud:
-    gcp:
-      core:
-        enabled: false
-      secretmanager:
-        enabled: false
-  sql:
-    init:
-      mode: always
-  kafka:
-    properties:
-      schema.registry.url: ${spring.kafka.properties.schema.registry.url} # dynamically set by test-containers
-  data:
-    redis:
-      host: ${spring.data.redis.host} # dynamically set by test-containers
-      port: ${spring.data.redis.port} # dynamically set by test-containers
+# ${} values are dynamically overridden by test-containers

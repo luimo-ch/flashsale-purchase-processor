@@ -1,6 +1,6 @@
 package ch.luimo.flashsale.purchase.consumer;
 
-import ch.luimode.flashsale.PurchaseRequest;
+import ch.luimode.flashsale.AvroPurchaseRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.kafka.annotation.KafkaListener;
@@ -14,7 +14,7 @@ public class PurchaseRequestsProcessor {
     @KafkaListener(
             topics = "${application.kafka-topics.purchase-requests}",
             groupId = "${spring.kafka.consumer.group-id}")
-    public void processPurchaseRequests(PurchaseRequest purchaseRequest) {
+    public void processPurchaseRequests(AvroPurchaseRequest purchaseRequest) {
         LOG.info("Received Message {} ", purchaseRequest);
     }
 

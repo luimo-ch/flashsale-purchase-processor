@@ -1,0 +1,12 @@
+# configuration for local development with dockerized dependencies (see docker-compose.yml)
+# NOTE: 'local' is used for running the service outside the container!
+spring:
+  kafka:
+    bootstrap-servers: localhost:9092
+    properties:
+      schema.registry.url: localhost:8081
+      security.protocol: PLAINTEXT
+  data:
+    redis:
+      host: localhost
+      port: 6379
