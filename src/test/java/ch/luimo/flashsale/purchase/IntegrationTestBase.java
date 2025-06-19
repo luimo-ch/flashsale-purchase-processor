@@ -1,14 +1,19 @@
 package ch.luimo.flashsale.purchase;
 
+import ch.luimo.flashsale.eventservice.avro.AvroEventStatus;
+import ch.luimo.flashsale.eventservice.avro.AvroFlashSaleEvent;
 import ch.luimo.flashsale.purchase.config.KafkaTestProducerConfig;
+import ch.luimode.flashsale.AvroPurchaseRequest;
+import ch.luimode.flashsale.SourceType;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.NewTopic;
+import org.awaitility.Awaitility;
+import org.awaitility.core.ThrowingRunnable;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
@@ -19,9 +24,12 @@ import org.testcontainers.kafka.ConfluentKafkaContainer;
 import org.testcontainers.utility.DockerImageName;
 
 import java.time.Duration;
+import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 @SpringBootTest
 @Import(KafkaTestProducerConfig.class)
@@ -60,11 +68,11 @@ public abstract class IntegrationTestBase {
             .waitingFor(Wait.forHttp("/subjects"))
             .withStartupTimeout(Duration.of(120, ChronoUnit.SECONDS));
 
-    @Value("${application.kafka-topics.flashsale-events}")
-    protected String kafkaTopic;
-
     @Autowired
     protected KafkaTestProducerConfig.FlashSaleEventsTestProducer flashSaleEventsTestProducer;
+
+    @Autowired
+    protected KafkaTestProducerConfig.PurchaseRequestsTestProducer purchaseRequestsTestProducer;
 
     @BeforeAll
     static void startContainers() {
@@ -109,5 +117,38 @@ public abstract class IntegrationTestBase {
         if (REDIS_CONTAINER != null) {
             REDIS_CONTAINER.stop();
         }
+    }
+
+    protected void pollUntilAsserted(ThrowingRunnable runnable) {
+        Awaitility.await()
+                .atMost(5, TimeUnit.SECONDS)
+                .with().pollInterval(Duration.ofMillis(500))
+                .untilAsserted(runnable);
+    }
+
+    protected AvroFlashSaleEvent flashSaleEventOf() {
+        return AvroFlashSaleEvent.newBuilder()
+                .setEventId(UUID.randomUUID().toString())
+                .setEventName("test event")
+                .setStartTime(Instant.now())
+                .setDuration(3600)
+                .setProductId(UUID.randomUUID().toString())
+                .setSellerId(UUID.randomUUID().toString())
+                .setStockQuantity(1000)
+                .setMaxPerCustomer(10)
+                .setEventStatus(AvroEventStatus.STARTED)
+                .build();
+    }
+
+    protected AvroPurchaseRequest purchaseRequestOf(String eventId, int quantity) {
+        return AvroPurchaseRequest.newBuilder()
+                .setEventId(eventId)
+                .setRequestedAt(Instant.now())
+                .setQuantity(quantity)
+                .setSource(SourceType.WEB)
+                .setUserId(UUID.randomUUID().toString())
+                .setItemId(UUID.randomUUID().toString())
+                .setPurchaseId(UUID.randomUUID().toString())
+                .build();
     }
 }

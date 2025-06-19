@@ -1,9 +1,9 @@
 package ch.luimo.flashsale.purchase.service;
 
+import ch.luimo.flashsale.purchase.domain.PurchaseRequest;
 import ch.luimode.flashsale.AvroPurchaseRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
@@ -12,16 +12,36 @@ public class PurchaseService {
 
     private static final Logger LOG = LoggerFactory.getLogger(PurchaseService.class);
 
-    private final KafkaTemplate<String, AvroPurchaseRequest> kafkaTemplate;
+    private final FlashSaleEventCacheService flashSaleEventCacheService;
 
-    @Value("${application.kafka-topics.purchase-requests}")
-    private String AvroPurchaseRequestsTopic;
-
-    public PurchaseService(KafkaTemplate<String, AvroPurchaseRequest> kafkaTemplate) {
-        this.kafkaTemplate = kafkaTemplate;
+    public PurchaseService(KafkaTemplate<String, AvroPurchaseRequest> kafkaTemplate,
+                           FlashSaleEventCacheService flashSaleEventCacheService) {
+        this.flashSaleEventCacheService = flashSaleEventCacheService;
     }
 
-    public void sendMessage(String topic, AvroPurchaseRequest avroMessage) {
-        kafkaTemplate.send(topic, "key", avroMessage);
+    public void processPurchaseRequest(PurchaseRequest purchaseRequest) {
+        validateRequest(purchaseRequest);
+        flashSaleEventCacheService.decrementStock(purchaseRequest.getEventId(), purchaseRequest.getQuantity());
+        flashSaleEventCacheService.setRequestConfirmation(purchaseRequest.getPurchaseId());
+    }
+
+    private void validateRequest(PurchaseRequest purchaseRequest) {
+        String eventId = purchaseRequest.getEventId();
+        if (!flashSaleEventCacheService.isEventActive(eventId)) {
+            rejectPurchaseRequest(purchaseRequest, "Event " + eventId + " is not yet active!");
+        }
+        int perCustomerPurchaseLimit = flashSaleEventCacheService.getPerCustomerPurchaseLimit(eventId);
+        if (purchaseRequest.getQuantity() >  perCustomerPurchaseLimit) {
+            rejectPurchaseRequest(purchaseRequest, "Event " + eventId + " has a limit of {} per person!");
+        }
+        int stock = flashSaleEventCacheService.getStock(eventId);
+        if (stock < purchaseRequest.getQuantity()) {
+            rejectPurchaseRequest(purchaseRequest, "Event " + eventId + " has not enough stock!");
+        }
+    }
+
+    private void rejectPurchaseRequest(PurchaseRequest purchaseRequest, String reason) {
+        flashSaleEventCacheService.setRequestRejection(purchaseRequest.getEventId(),
+                purchaseRequest.getPurchaseId(), reason);
     }
 }
