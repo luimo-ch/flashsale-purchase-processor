@@ -116,7 +116,7 @@ public class FlashSaleEventCacheService {
             LOG.error("Purchase request status with key {} was not found! Skipping confirmation.", purchaseRequestKey);
         }
         if (!PurchaseRequestStatus.isPending(currentStatus)) {
-            LOG.error("Purchase request status with key {} was not pending! Skipping confirmation.", purchaseRequestKey);
+            LOG.error("Purchase request status with key {} was not pending! It is {}. Skipping confirmation.", purchaseRequestKey,  currentStatus);
         }
         hashOps.put(purchaseRequestKey, PURCHASE_REQUEST_STATUS, PurchaseRequestStatus.CONFIRMED.name());
     }

@@ -20,24 +20,32 @@ public class PurchaseService {
     }
 
     public void processPurchaseRequest(PurchaseRequest purchaseRequest) {
-        validateRequest(purchaseRequest);
-        flashSaleEventCacheService.decrementStock(purchaseRequest.getEventId(), purchaseRequest.getQuantity());
-        flashSaleEventCacheService.setRequestConfirmation(purchaseRequest.getPurchaseId());
+        ValidationResult validationResult = validateRequest(purchaseRequest);
+        if (!validationResult.isValid()) {
+            LOG.warn("Validation failed for {} with reason: {}", purchaseRequest.getPurchaseId(), validationResult.reason());
+            rejectPurchaseRequest(purchaseRequest, validationResult.reason());
+        } else {
+            flashSaleEventCacheService.decrementStock(purchaseRequest.getEventId(), purchaseRequest.getQuantity());
+            flashSaleEventCacheService.setRequestConfirmation(purchaseRequest.getPurchaseId());
+        }
     }
 
-    private void validateRequest(PurchaseRequest purchaseRequest) {
+    private ValidationResult validateRequest(PurchaseRequest purchaseRequest) {
         String eventId = purchaseRequest.getEventId();
         if (!flashSaleEventCacheService.isEventActive(eventId)) {
-            rejectPurchaseRequest(purchaseRequest, "Event " + eventId + " is not yet active!");
+            return new ValidationResult(false, "Event " + eventId + " is not yet active!");
+
         }
         int perCustomerPurchaseLimit = flashSaleEventCacheService.getPerCustomerPurchaseLimit(eventId);
         if (purchaseRequest.getQuantity() >  perCustomerPurchaseLimit) {
-            rejectPurchaseRequest(purchaseRequest, "Event " + eventId + " has a limit of {} per person!");
+            return new ValidationResult(false,
+                    "Event " + eventId + " has a limit of " + perCustomerPurchaseLimit +" per person! Requested: " + purchaseRequest.getQuantity());
         }
         int stock = flashSaleEventCacheService.getStock(eventId);
         if (stock < purchaseRequest.getQuantity()) {
-            rejectPurchaseRequest(purchaseRequest, "Event " + eventId + " has not enough stock!");
+            return new ValidationResult(false, "Event " + eventId + " has not enough stock!");
         }
+        return new ValidationResult(true, "");
     }
 
     private void rejectPurchaseRequest(PurchaseRequest purchaseRequest, String reason) {
