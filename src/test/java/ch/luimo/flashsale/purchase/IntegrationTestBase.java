@@ -107,7 +107,7 @@ public abstract class IntegrationTestBase {
     }
 
     @AfterAll
-    static void stopKafka() {
+    static void tearDown() {
         if (SCHEMA_REGISTRY != null) {
             SCHEMA_REGISTRY.stop();
         }
