@@ -20,7 +20,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class PurchaseRequestsIntTest extends IntegrationTestBase {
 
-    private static final Logger LOG = LoggerFactory.getLogger(FlashSaleEventsIntTest.class);
+    private static final Logger LOG = LoggerFactory.getLogger(PurchaseRequestsIntTest.class);
 
     @Autowired
     FlashSaleEventCacheService cacheService;

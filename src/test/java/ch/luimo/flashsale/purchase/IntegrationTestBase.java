@@ -16,6 +16,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.Network;
@@ -33,6 +34,7 @@ import java.util.concurrent.TimeUnit;
 
 @SpringBootTest
 @Import(KafkaTestProducerConfig.class)
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 @ActiveProfiles("test")
 public abstract class IntegrationTestBase {
 
@@ -40,9 +42,6 @@ public abstract class IntegrationTestBase {
     public static final String SCHEMA_REGISTRY_PROPERTY = "SCHEMA_REGISTRY_URL";
 
     private static final Logger LOG = LoggerFactory.getLogger(IntegrationTestBase.class);
-
-    private static final GenericContainer<?> REDIS_CONTAINER = new GenericContainer<>("redis:7.0.12")
-            .withExposedPorts(6379);
 
     public static final String CONFLUENT_PLATFORM_VERSION = "7.4.0";
     private static final DockerImageName KAFKA_IMAGE = DockerImageName.parse("confluentinc/cp-kafka")
@@ -54,8 +53,7 @@ public abstract class IntegrationTestBase {
 
     private static final ConfluentKafkaContainer KAFKA_CONTAINER = new ConfluentKafkaContainer(KAFKA_IMAGE)
             .withListener("kafka:19092")
-            .withNetwork(KAFKA_NETWORK)
-            .withReuse(true);
+            .withNetwork(KAFKA_NETWORK);
 
     private static final GenericContainer<?> SCHEMA_REGISTRY = new GenericContainer<>(SCHEMA_REGISTRY_IMAGE)
             .withExposedPorts(8085)
@@ -67,6 +65,9 @@ public abstract class IntegrationTestBase {
             .withEnv("SCHEMA_REGISTRY_KAFKASTORE_SECURITY_PROTOCOL", "PLAINTEXT")
             .waitingFor(Wait.forHttp("/subjects"))
             .withStartupTimeout(Duration.of(120, ChronoUnit.SECONDS));
+
+    private static final GenericContainer<?> REDIS_CONTAINER = new GenericContainer<>("redis:7.0.12")
+            .withExposedPorts(6379);
 
     @Autowired
     protected KafkaTestProducerConfig.FlashSaleEventsTestProducer flashSaleEventsTestProducer;
@@ -96,7 +97,7 @@ public abstract class IntegrationTestBase {
     private static void createTestKafkaTopic(String topicName, String bootstrapServers, boolean logCompaction) {
         try (AdminClient adminClient = AdminClient.create(Map.of("bootstrap.servers", bootstrapServers))) {
             NewTopic topic = new NewTopic(topicName, 1, (short) 1);
-            if(logCompaction) {
+            if (logCompaction) {
                 topic = topic.configs(Map.of("cleanup.policy", "compact"));
             }
             adminClient.createTopics(List.of(topic)).all().get();
