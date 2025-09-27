@@ -87,6 +87,8 @@ public class FlashSaleEventCacheService {
 
     public void decrementStock(String eventId, int amount) {
         String key = EVENT_HASH_KEY_PREFIX + eventId;
+        int currentStockQuantity = getStock(eventId);
+        LOG.info("Decrementing stock from {} to {}", getStock(eventId), currentStockQuantity - amount);
         hashOps.increment(key, KEY_STOCK_QUANTITY, (amount * -1));
     }
 

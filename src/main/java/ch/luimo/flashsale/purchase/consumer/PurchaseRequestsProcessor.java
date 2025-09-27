@@ -23,7 +23,7 @@ public class PurchaseRequestsProcessor {
             topics = "${application.kafka-topics.purchase-requests}",
             groupId = "${spring.kafka.consumer.group-id}")
     public void processPurchaseRequests(AvroPurchaseRequest avroPurchaseRequest) {
-        LOG.info("Received Message {} ", avroPurchaseRequest);
+        LOG.info("Received flashsale.purchase.requests msg {} ", avroPurchaseRequest);
         purchaseService.processPurchaseRequest(toPurchaseRequest(avroPurchaseRequest));
     }
 

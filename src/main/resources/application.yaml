@@ -40,3 +40,5 @@ logging:
   level:
     org.apache.kafka: WARN
     io.confluent.kafka: WARN
+  pattern:
+    console: "%d{HH:mm:ss.SSS} %-4level [purchase-processor] %logger{36} - %msg%n"

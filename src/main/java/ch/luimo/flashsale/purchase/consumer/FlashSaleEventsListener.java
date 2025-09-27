@@ -21,7 +21,7 @@ public class FlashSaleEventsListener {
             topics = "${application.kafka-topics.flashsale-events}",
             groupId = "${spring.kafka.consumer.group-id}")
     public void processFlashsaleEvents(AvroFlashSaleEvent avroFlashSaleEvent) {
-        LOG.info("FlashSaleEventsListener Received Message {} ", avroFlashSaleEvent);
+        LOG.info("Received Message from flashsale.events {} ", avroFlashSaleEvent);
 
         switch (avroFlashSaleEvent.getEventStatus()) {
             case STARTED -> cacheService.addEvent(avroFlashSaleEvent);
